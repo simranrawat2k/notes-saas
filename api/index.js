@@ -1,8 +1,11 @@
+// api/index.js
 const serverless = require('serverless-http');
 const app = require('../backend/src/app');
 const connectDB = require('../backend/src/config/db');
 
-let isConnected;
+let isConnected = false;
+
+const handler = serverless(app); // <- create once
 
 module.exports = async (req, res) => {
   if (!isConnected) {
@@ -14,6 +17,5 @@ module.exports = async (req, res) => {
       return res.status(500).json({ error: 'DB connection failed' });
     }
   }
-  const handler = serverless(app);
   return handler(req, res);
 };
