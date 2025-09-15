@@ -1,20 +1,24 @@
-// backend/src/app.js
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const connectDB = require('./config/db');
 
 const authRoutes = require('./routes/auth');
 const notesRoutes = require('./routes/notes');
 const tenantsRoutes = require('./routes/tenants');
 
 const app = express();
-app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
-// health check
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/health', async (req, res) => {
+  try {
+    await connectDB(process.env.MONGODB_URI);
+    res.json({ status: 'ok' });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
 
-// routes
 app.use('/api/auth', authRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/tenants', tenantsRoutes);
