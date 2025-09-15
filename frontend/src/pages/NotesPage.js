@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Navbar from "../components/Navbar";
 import NoteItem from "../components/NoteItem";
 import {
@@ -16,11 +16,19 @@ const NotesPage = () => {
   const [content, setContent] = useState("");
   const [limitReached, setLimitReached] = useState(false);
   const [tenantSlug, setTenantSlug] = useState("");
-  const [role, setRole] = useState(""); 
-  const [editingNoteId, setEditingNoteId] = useState(null); 
+  const [role, setRole] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState(null);
 
+   const checkLimit = useCallback(
+    (notesArray) => {
+      if (role === "Member" && notesArray?.length >= 3) setLimitReached(true);
+      else setLimitReached(false);
+    },
+    [role]
+  );
+  
   // Fetch notes from backend
-  const fetchNotes = async () => {
+  const fetchNotes = useCallback(async () => {
     try {
       const data = await getNotes();
       setNotes(data || []);
@@ -30,22 +38,19 @@ const NotesPage = () => {
       setNotes([]);
       setLimitReached(false);
     }
-  };
+  }, [checkLimit]);
 
-  const checkLimit = (notesArray) => {
-    if (role === "Member" && notesArray?.length >= 3) setLimitReached(true);
-    else setLimitReached(false);
-  };
+ 
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
       const decoded = jwtDecode(token);
       setTenantSlug(decoded.tenantSlug);
-      setRole(decoded.role.charAt(0).toUpperCase() + decoded.role.slice(1)); // 'admin' -> 'Admin'
+      setRole(decoded.role.charAt(0).toUpperCase() + decoded.role.slice(1));
     }
     fetchNotes();
-  }, []);
+  }, [fetchNotes]);
 
   // Add or update a note
   const handleAddOrUpdateNote = async () => {
@@ -58,15 +63,10 @@ const NotesPage = () => {
 
     try {
       if (editingNoteId) {
-        // Update note
         const updatedNote = await updateNote(editingNoteId, title, content);
-        const updatedNotes = notes.map((n) =>
-          n._id === editingNoteId ? updatedNote : n
-        );
-        setNotes(updatedNotes);
+        setNotes(notes.map((n) => (n._id === editingNoteId ? updatedNote : n)));
         setEditingNoteId(null);
       } else {
-        // Create new note
         const newNote = await createNote(title, content);
         const updatedNotes = [...notes, newNote];
         setNotes(updatedNotes);
@@ -133,13 +133,12 @@ const NotesPage = () => {
         <h2 style={{ color: "#5C59E8", marginBottom: "20px" }}>Your Notes</h2>
 
         {/* Add/Edit note form */}
-
         <div
           style={{
             display: "flex",
             gap: "10px",
             marginBottom: "20px",
-            flexWrap: "wrap", 
+            flexWrap: "wrap",
           }}
         >
           <input
@@ -148,7 +147,7 @@ const NotesPage = () => {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             style={{
-              flex: "1 1 200px", 
+              flex: "1 1 200px",
               padding: "10px",
               borderRadius: "6px",
               border: "1px solid #ccc",
@@ -160,7 +159,7 @@ const NotesPage = () => {
             value={content}
             onChange={(e) => setContent(e.target.value)}
             style={{
-              flex: "2 1 300px", 
+              flex: "2 1 300px",
               padding: "10px",
               borderRadius: "6px",
               border: "1px solid #ccc",
@@ -170,7 +169,7 @@ const NotesPage = () => {
             onClick={handleAddOrUpdateNote}
             disabled={role === "Member" && limitReached && !editingNoteId}
             style={{
-              flex: "1 1 150px", 
+              flex: "1 1 150px",
               minWidth: "150px",
               padding: "10px 20px",
               borderRadius: "6px",
@@ -187,14 +186,12 @@ const NotesPage = () => {
           </button>
         </div>
 
-        {/* Free plan limit message for Members */}
         {role === "Member" && limitReached && !editingNoteId && (
           <div style={{ color: "red", marginBottom: "20px" }}>
             Free plan limit reached. Only Admin can upgrade to Pro.
           </div>
         )}
 
-        {/* Upgrade button for Admin */}
         {role === "Admin" && (
           <div style={{ marginBottom: "20px" }}>
             <button
@@ -213,7 +210,6 @@ const NotesPage = () => {
           </div>
         )}
 
-        {/* Notes list */}
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           {notes.length > 0 ? (
             notes.map((note) => (
